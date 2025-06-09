@@ -1,7 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from decimal import Decimal
 from typing import List
+from sqlalchemy.orm import Session
+from shared.depedencies import get_db
+from contas.models.contas import Contas
 
 router = APIRouter(prefix="/contas", tags=["Contas"])
 
@@ -16,6 +19,9 @@ class ContaResponse(BaseModel):
     valor: Decimal
     tipo: str
 
+    class Config:
+        orm_mode = True
+
 
 class ContaRequest(BaseModel):
     """
@@ -28,25 +34,13 @@ class ContaRequest(BaseModel):
 
 
 @router.get("/listar", summary="Listar contas")
-def listar_contas() -> List[ContaResponse]:
+def listar_contas(db: Session = Depends(get_db)) -> List[ContaResponse]:
     """
     Função para listar contas.
     Retorna uma lista de contas.
     """
-    return [
-        ContaResponse(
-            id=1,
-            descricao="Conta de Luz",
-            valor=Decimal("150.00"),
-            tipo="Despesa"
-        ),
-        ContaResponse(
-            id=2,
-            descricao="Conta de Luz 1",
-            valor=Decimal("150.00"),
-            tipo="Despesa"
-        ),
-    ]
+    contas = db.query(Contas).all()
+    return contas
 
 
 @router.post(
@@ -55,14 +49,15 @@ def listar_contas() -> List[ContaResponse]:
         response_model=ContaResponse,
         status_code=201
 )
-def criar_conta(conta: ContaRequest) -> ContaRequest:
+def criar_conta(conta: ContaRequest, db: Session = Depends(get_db)) -> ContaRequest:
     """
     Função para criar uma nova conta.
     Retorna a conta criada.
     """
-    return ContaResponse(
-        id=3,
-        descricao=conta.descricao,
-        valor=conta.valor,
-        tipo=conta.tipo
-    )
+
+    nova_conta = Contas(**conta.model_dump())
+    db.add(nova_conta)
+    db.commit()
+    db.refresh(nova_conta)
+
+    return nova_conta

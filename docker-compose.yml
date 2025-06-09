@@ -1,0 +1,15 @@
+volumes:
+  pg_flask:
+
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres_db_flask
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_flask:/var/lib/postgresql/data
